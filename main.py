@@ -44,34 +44,25 @@ def get_specific_stock(stock_type):
             return f"❌ Website se connect nahi ho paya."
 
         soup = BeautifulSoup(response.content, 'html.parser')
-        
         matched_fruits = []
-        sections = soup.find_all(['div', 'section', 'article', 'table'])
         
-        target_section = None
-        for sec in sections:
-            sec_text = sec.get_text().lower()
-            if stock_type.lower() in sec_text:
-                target_section = sec
-                break
-        
-        search_area = target_section if target_section else soup
-        
-        for element in search_area.find_all(['div', 'span', 'p', 'h3', 'a', 'strong', 'li', 'td']):
+        # Pura page ka text ya elements check karenge
+        for element in soup.find_all(['div', 'span', 'p', 'h3', 'a', 'strong', 'li', 'td']):
             text = element.get_text(strip=True).lower()
+            
+            # Agar text ke andar fruit ka naam hai, toh use le lenge
             for fruit_key, fruit_display in FRUIT_EMOJIS.items():
-                if fruit_key == text or f" {fruit_key} " in f" {text} ":
+                if fruit_key in text:
                     if fruit_display not in matched_fruits:
                         matched_fruits.append(fruit_display)
 
-        # Footer text jo har stock message ke niche aayega
         footer_text = "\n\n──────────────────\n👑 **Owner:** @xdsp18\n🛒 **Buy fruit and gamepasses**"
 
         if matched_fruits:
             fruit_list = "\n• ".join(matched_fruits)
             return f"🔥 *Gamersberg {stock_type} Stock:*\n\n• {fruit_list}{footer_text}"
         else:
-            return f"⚠️ {stock_type} Stock mein abhi koi fruit match nahi hua.{footer_text}"
+            return f"⚠️ Stock fetch nahi ho paya. (Website ka layout dynamic ho sakta hai).{footer_text}"
 
     except Exception as e:
         return f"❌ Error: {e}"
@@ -91,7 +82,7 @@ def stock_command(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    stock_type = call.data  # 'Normal' ya 'Mirage'
+    stock_type = call.data  
     bot.answer_callback_query(call.id, f"{stock_type} stock check kiya ja raha hai...")
     stock_text = get_specific_stock(stock_type)
     bot.send_message(call.message.chat.id, stock_text, parse_mode='Markdown')
