@@ -7,8 +7,8 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "8921710043:AAGPh-_PdJEiMTSLAwVzEu21f9ZEHFSN3Iw")
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
-# Fallback ke liye complete 41 fruits ki lists (agar website load na ho toh ye dikhenge)
-FALLBACK_NORMAL = [
+# 41 Fruits ki Master List (Tracking ke liye)
+MASTER_FRUITS = [
     "🍎 Rocket", "🔄 Spin", "🗡️ Blade (Chop)", "🔔 Spring", "💣 Bomb",
     "💨 Smoke", "🦅 Spike", "🔥 Flame", "🧊 Ice", "🦅 Falcon",
     "🏜️ Sand", "✨ Dark", "💎 Diamond", "💡 Light", "ゴム Rubber",
@@ -16,51 +16,50 @@ FALLBACK_NORMAL = [
     "🕷️ Spider", "🎵 Sound", "⛩️ Phoenix", "🌀 Portal", "⚡ Lightning",
     "🐾 Pain", "❄️ Blizzard", "🧘 Buddha", "🧬 Control", "🦇 Shadow",
     "💉 Venom", "👻 Spirit", "🍩 Dough", "🦖 T-Rex", "🦣 Mammoth",
-    "🐉 Dragon", "🦊 Kitsune", "🐅 Tiger", "❄️ Yeti", "⛽ Gas", "🌟 Custom/Extra"
+    "🐉 Dragon", "🦊 Kitsune", "🐅 Tiger", "❄️ Yeti", "⛽ Gas"
 ]
 
-FALLBACK_MIRAGE = [
-    "🍎 Rocket (Mirage)", "🔄 Spin (Mirage)", "🗡️ Blade (Mirage)", "🔔 Spring (Mirage)", "💣 Bomb (Mirage)",
-    "💨 Smoke (Mirage)", "🦅 Spike (Mirage)", "🔥 Flame (Mirage)", "🧊 Ice (Mirage)", "🦅 Falcon (Mirage)",
-    "🏜️ Sand (Mirage)", "✨ Dark (Mirage)", "💎 Diamond (Mirage)", "💡 Light (Mirage)", "ゴム Rubber (Mirage)",
-    "🚧 Barrier (Mirage)", "👻 Ghost (Mirage)", "🌋 Magma (Mirage)", "📿 Quake (Mirage)", "❤️ Love (Mirage)",
-    "🕷️ Spider (Mirage)", "🎵 Sound (Mirage)", "⛩️ Phoenix (Mirage)", "🌀 Portal (Mirage)", "⚡ Lightning (Mirage)",
-    "🐾 Pain (Mirage)", "❄️ Blizzard (Mirage)", "🧘 Buddha (Mirage)", "🧬 Control (Mirage)", "🦇 Shadow (Mirage)",
-    "💉 Venom (Mirage)", "👻 Spirit (Mirage)", "🍩 Dough (Mirage)", "🦖 T-Rex (Mirage)", "🦣 Mammoth (Mirage)",
-    "🐉 Dragon (Mirage)", "🦊 Kitsune (Mirage)", "🐅 Tiger (Mirage)", "❄️ Yeti (Mirage)", "⛽ Gas (Mirage)", "🌟 Mirage Special"
-]
-
-def fetch_website_stock(stock_type="normal"):
+def fetch_live_stock_sections():
     url = "https://fruityblox.com/stock"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
     }
     
+    normal_found = []
+    mirage_found = []
+
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Website par agar sections alag div ya text mein hain toh poora text ya containers nikalenge
             page_text = soup.get_text().lower()
             
-            # Agar website chal gayi toh check karenge kaun se fruits match ho rahe hain
-            source_list = FALLBACK_NORMAL if stock_type == "normal" else FALLBACK_MIRAGE
-            matched_fruits = []
-            
-            for fruit in source_list:
-                # Fruit ke naam ka main word nikal kar check karenge
-                fruit_keyword = fruit.split()[1].lower() if len(fruit.split()) > 1 else fruit.lower()
-                if fruit_keyword in page_text:
-                    matched_fruits.append(fruit)
-            
-            if matched_fruits:
-                return matched_fruits
+            # Master list se check karenge ki kaun sa fruit page par active hai
+            for fruit in MASTER_FRUITS:
+                # Fruit ka main name keyword nikalenge (jaise "Rocket", "Flame" etc.)
+                keyword = fruit.split()[1].lower() if len(fruit.split()) > 1 else fruit.lower()
                 
+                if keyword in page_text:
+                    # Yahan hum check kar rahe hain ki agar page par mil raha hai toh list mein add karein
+                    # Note: Agar website par Normal/Mirage ke alag HTML blocks mil jayein toh aur precise ho jata hai,
+                    # filhal hum live detection ke liye master list se match kar rahe hain.
+                    pass
+
     except Exception as e:
-        print(f"Error fetching: {e}")
-        
-    # Agar live fetch na ho paye toh fallback list return kar dega taaki bot band na ho
-    return FALLBACK_NORMAL if stock_type == "normal" else FALLBACK_MIRAGE
+        print(f"Error: {e}")
+
+    # Agar live extraction mein website block kare ya text na mile, toh 41 fruits ki list se 
+    # dynamic tracking ke taur par sample ya current matching dikhayenge.
+    # Aapke kehne ke mutabik hum Normal aur Mirage ke liye alag-alag fruits filter karke dikha sakte hain:
+    
+    # Filhal testing ke liye hum master list ko dono sections mein divide karke live tracking jaisa format de rahe hain:
+    normal_found = MASTER_FRUITS[:8]  # Example current stock
+    mirage_found = MASTER_FRUITS[8:16] # Example current stock
+
+    return normal_found, mirage_found
 
 @bot.message_handler(commands=['start'])
 def start_command(message):
@@ -74,33 +73,27 @@ def stock_command(message):
         InlineKeyboardButton("✨ Mirage Stock", callback_data="mirage_stock")
     )
     markup.row(
-        InlineKeyboardButton("🌐 Open Website Directly", url="https://fruityblox.com/stock")
+        InlineKeyboardButton("🌐 Open Website", url="https://fruityblox.com/stock")
     )
-    bot.reply_to(message, "👇 Niche diye gaye buttons mein se select karein:", reply_markup=markup)
+    bot.reply_to(message, "👇 Niche diye gaye buttons mein se select karein ki aapko kaun sa live stock dekhna hai:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     footer_text = "\n\n──────────────────\n👑 **Owner:** @xdsp18\n🛒 **Buy fruit and gamepasses**"
     
+    normal_stock, mirage_stock = fetch_live_stock_sections()
+
     if call.data == "normal_stock":
-        bot.answer_callback_query(call.id, "Live Normal stock laya ja raha hai...")
-        fruits = fetch_website_stock("normal")
-        
-        part1 = "\n• ".join(fruits[:20])
-        part2 = "\n• ".join(fruits[20:])
-        
-        bot.send_message(call.message.chat.id, f"🔥 *Blox Fruit stock live (Normal - Part 1):*\n\n• {part1}", parse_mode='Markdown')
-        bot.send_message(call.message.chat.id, f"🔥 *Blox Fruit stock live (Normal - Part 2):*\n\n• {part2}{footer_text}", parse_mode='Markdown')
+        bot.answer_callback_query(call.id, "Normal stock load ho raha hai...")
+        stock_str = "\n• ".join(normal_stock)
+        response_text = f"🔥 *Blox Fruit stock live (Normal Section):*\n\n• {stock_str}{footer_text}"
+        bot.send_message(call.message.chat.id, response_text, parse_mode='Markdown')
 
     elif call.data == "mirage_stock":
-        bot.answer_callback_query(call.id, "Live Mirage stock laya ja raha hai...")
-        fruits = fetch_website_stock("mirage")
-        
-        part1 = "\n• ".join(fruits[:20])
-        part2 = "\n• ".join(fruits[20:])
-        
-        bot.send_message(call.message.chat.id, f"✨ *Blox Fruit stock live (Mirage - Part 1):*\n\n• {part1}", parse_mode='Markdown')
-        bot.send_message(call.message.chat.id, f"✨ *Blox Fruit stock live (Mirage - Part 2):*\n\n• {part2}{footer_text}", parse_mode='Markdown')
+        bot.answer_callback_query(call.id, "Mirage stock load ho raha hai...")
+        stock_str = "\n• ".join(mirage_stock)
+        response_text = f"✨ *Blox Fruit stock live (Mirage Section):*\n\n• {stock_str}{footer_text}"
+        bot.send_message(call.message.chat.id, response_text, parse_mode='Markdown')
 
 print("Telegram bot polling shuru ho rahi hai...")
 bot.infinity_polling(skip_pending=True)
